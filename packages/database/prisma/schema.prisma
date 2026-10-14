@@ -1,0 +1,165 @@
+// HomeFlow AI schema. The datasource URL is configured in prisma.config.ts (Prisma 7).
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum MemberRole {
+  ADMIN
+  MEMBER
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum GroceryStatus {
+  NEEDED
+  PURCHASED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  EXECUTED
+  FAILED
+}
+
+/// isDemo = true marks fake demo data created by the seed script.
+model Household {
+  id            String            @id @default(cuid())
+  name          String            @db.VarChar(120)
+  timezone      String            @default("UTC") @db.VarChar(64)
+  preferences   Json?
+  isDemo        Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  members       HouseholdMember[]
+  tasks         Task[]
+  groceryItems  GroceryItem[]
+  conversations Conversation[]
+  approvals     ActionApproval[]
+}
+
+model HouseholdMember {
+  id          String     @id @default(cuid())
+  householdId String
+  name        String     @db.VarChar(80)
+  role        MemberRole @default(MEMBER)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  household   Household  @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([householdId])
+}
+
+model Task {
+  id          String           @id @default(cuid())
+  householdId String
+  title       String           @db.VarChar(200)
+  description String?          @db.Text
+  dueDate     DateTime?
+  status      TaskStatus       @default(TODO)
+  assigneeId  String?
+  /// Set when created by an approved action; (approvalId, actionIndex) is an idempotency key.
+  approvalId  String?
+  actionIndex Int?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  household   Household        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  assignee    HouseholdMember? @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  approval    ActionApproval?  @relation(fields: [approvalId], references: [id], onDelete: SetNull)
+
+  @@unique([approvalId, actionIndex])
+  @@index([householdId, status])
+  @@index([householdId, dueDate])
+}
+
+model GroceryItem {
+  id             String        @id @default(cuid())
+  householdId    String
+  name           String        @db.VarChar(120)
+  /// Lower-cased, trimmed, whitespace-collapsed name; prevents duplicate items.
+  normalizedName String        @db.VarChar(120)
+  quantity       Int           @default(1)
+  unit           String?       @db.VarChar(30)
+  notes          String?       @db.VarChar(255)
+  status         GroceryStatus @default(NEEDED)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  household      Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, normalizedName])
+  @@index([householdId, status])
+}
+
+model Conversation {
+  id          String           @id @default(cuid())
+  householdId String
+  title       String?          @db.VarChar(200)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  household   Household        @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  approvals   ActionApproval[]
+
+  @@index([householdId, updatedAt])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String       @db.Text
+  /// Provider name (e.g. "mock", "bedrock") for ASSISTANT messages.
+  provider       String?      @db.VarChar(40)
+  isMock         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model ActionApproval {
+  id             String         @id @default(cuid())
+  householdId    String
+  conversationId String
+  status         ApprovalStatus @default(PENDING)
+  summary        String         @db.VarChar(500)
+  /// Proposed actions exactly as shown to the user (validated with the shared Zod schema).
+  actions        Json
+  /// SHA-256 of the canonical JSON of `actions`; re-checked at execution time.
+  actionsHash    String         @db.VarChar(64)
+  provider       String         @db.VarChar(40)
+  isMock         Boolean        @default(false)
+  expiresAt      DateTime
+  decidedAt      DateTime?
+  executedAt     DateTime?
+  /// Per-action execution results.
+  result         Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  household      Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  tasks          Task[]
+
+  @@index([householdId, status])
+  @@index([status, expiresAt])
+}
