@@ -27,7 +27,7 @@ export function useAssistant(onDataChanged: () => void) {
       try {
         const res = await api.plan(message, conversationId);
         setConversationId(res.conversationId);
-        setApproval(res.approval);
+        setApproval(res.approval ?? undefined);
         push({ role: "assistant", text: res.assistantMessage, provider: res.provider });
       } catch (e) {
         setError(errorMessage(e));

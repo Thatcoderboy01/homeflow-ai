@@ -25,18 +25,18 @@ export function Header({ health, healthError, loading }: Props) {
           </span>
           <div>
             <h1 className="text-base font-semibold leading-tight">HomeFlow AI</h1>
-            <p className="text-xs text-slate-300">Your Family's Action Agent</p>
+            <p className="text-xs text-slate-300">Your family&apos;s action agent</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" aria-live="polite" aria-label="System status">
-          <span className="rounded-full border border-amber-300/50 bg-amber-300/10 px-2.5 py-0.5 text-xs font-medium text-amber-200">
-            Local demo build
+          <span className="rounded-full border border-teal-300/50 bg-teal-300/10 px-2.5 py-0.5 text-xs font-medium text-teal-100">
+          Approval-first workspace
           </span>
           {health && (
             <span
               className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${health.ai.isMock ? "bg-amber-300 text-navy-950" : "bg-teal-400 text-navy-950"}`}
             >
-              {health.ai.isMock ? "Mock AI (demo)" : `AI: ${health.ai.provider}`}
+              {health.ai.isMock ? "Test provider" : `AI: ${health.ai.provider}`}
             </span>
           )}
           <Dot ok={loading ? undefined : apiUp} label="API" />

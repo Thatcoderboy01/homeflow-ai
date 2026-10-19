@@ -24,6 +24,26 @@ afterAll(async () => {
 beforeEach(async () => void (hid = await resetData()));
 
 describe("health, validation and errors", () => {
+  const conversationalProvider: LlmProvider = {
+    name: "gemini",
+    isMock: false,
+    generate: async (req) => ({
+      stopReason: "end_turn",
+      content: [{ type: "text", text: req.tools.length === 0 ? "Hey! I can help organize your household." : "unexpected" }],
+    }),
+  };
+
+  it("answers greetings without creating a proposal or calling MCP", async () => {
+    const app = makeApp({ provider: conversationalProvider });
+    const res = await request(app).post("/api/v1/agent/plan").send({ message: "Hi" });
+    expect(res.status).toBe(201);
+    expect(res.body.provider).toEqual({ name: "gemini", isMock: false });
+    expect(res.body.approval).toBeNull();
+    expect(res.body.assistantMessage).toMatch(/help organize/i);
+    expect((await listTasks(hid)).length).toBe(1);
+    expect((await listGroceries(hid)).length).toBe(1);
+  });
+
   it("GET /health reports database, mcp and mock mode", async () => {
     const res = await request(makeApp()).get("/api/v1/health");
     expect(res.status).toBe(200);
@@ -91,7 +111,7 @@ describe("health, validation and errors", () => {
   });
   it("surfaces provider failures instead of falling back to mock", async () => {
     const broken: LlmProvider = {
-      name: "bedrock",
+      name: "gemini",
       isMock: false,
       generate: async () => Promise.reject(Object.assign(new Error("x"), { name: "ThrottlingException" })),
     };
@@ -112,14 +132,14 @@ describe("plan -> approve -> execute", () => {
     expect(plan.status).toBe(201);
     const body = plan.body as PlanResponseDto;
     expect(body.provider).toEqual({ name: "mock", isMock: true });
-    expect(body.approval.status).toBe("PENDING");
-    expect(body.approval.actions.length).toBeGreaterThan(5);
+    expect(body.approval?.status).toBe("PENDING");
+    expect(body.approval?.actions.length).toBeGreaterThan(5);
 
     // Nothing was written yet.
     expect((await listTasks(hid)).length).toBe(1);
     expect((await listGroceries(hid)).length).toBe(1);
 
-    const ok = await request(app).post(`/api/v1/approvals/${body.approval.id}/approve`);
+    const ok = await request(app).post(`/api/v1/approvals/${body.approval!.id}/approve`);
     expect(ok.status).toBe(200);
     expect(ok.body.executedNow).toBe(true);
     expect(ok.body.approval.status).toBe("EXECUTED");
@@ -180,9 +200,9 @@ describe("plan -> approve -> execute", () => {
     expect((await listTasks(hid)).some((t) => t.title === "Tampered")).toBe(false);
   });
 
-  it("loadConfig requires bedrock model id when bedrock is selected", () => {
-    const env = { MCP_AUTH_TOKEN: "x".repeat(20), AI_PROVIDER: "bedrock" };
-    expect(() => loadConfig(env as never)).toThrow(/BEDROCK_MODEL_ID/);
-    expect(loadConfig({ MCP_AUTH_TOKEN: "x".repeat(20) } as never).AI_PROVIDER).toBe("mock");
+  it("loadConfig requires a Gemini API key when Gemini is selected", () => {
+    const env = { MCP_AUTH_TOKEN: "x".repeat(20), AI_PROVIDER: "gemini" };
+    expect(() => loadConfig(env as never)).toThrow(/GEMINI_API_KEY/);
+    expect(loadConfig({ ...env, GEMINI_API_KEY: "test-key" } as never).AI_PROVIDER).toBe("gemini");
   });
 });

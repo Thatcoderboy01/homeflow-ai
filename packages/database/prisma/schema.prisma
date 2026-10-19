@@ -128,7 +128,7 @@ model Message {
   conversationId String
   role           MessageRole
   content        String       @db.Text
-  /// Provider name (e.g. "mock", "bedrock") for ASSISTANT messages.
+  /// Provider name (e.g. "mock", "gemini") for ASSISTANT messages.
   provider       String?      @db.VarChar(40)
   isMock         Boolean      @default(false)
   createdAt      DateTime     @default(now())

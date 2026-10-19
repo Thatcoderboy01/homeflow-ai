@@ -42,7 +42,7 @@ export function DashboardPage() {
         </div>
       </main>
       <footer className="mx-auto max-w-7xl px-4 pb-8 text-xs text-slate-500 sm:px-6">
-        Local development/demo build. Seeded data is fake. No user authentication yet; do not expose publicly.
+        Approval-first workspace. This local build uses seeded data and has no user authentication; do not expose it publicly.
       </footer>
     </div>
   );

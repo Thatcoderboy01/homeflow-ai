@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DomainError, planSchema } from "@homeflow/shared";
-import { BedrockProvider, MockProvider, runPlanner, mapBedrockError, type LlmProvider, type ToolCaller } from "../src/index.js";
+import { classifyIntent, GeminiProvider, MockProvider, runPlanner, mapGeminiError, type LlmProvider, type ToolCaller } from "../src/index.js";
 
 const fixedNow = new Date("2026-10-14T10:00:00Z"); // a Wednesday
 const ctx = {
@@ -22,6 +22,24 @@ describe("mock provider + planner", () => {
         householdId: "h1",
         message: "Guests are coming on Sunday. Help me prepare.",
         now: fixedNow,
+      });
+
+      describe("conversation intent routing", () => {
+        it.each([
+          ["Hi", "greeting"],
+          ["How are you?", "casual_conversation"],
+          ["What can you do?", "capability_question"],
+          ["What is meal planning?", "general_question"],
+          ["Show my grocery list", "household_information_query"],
+          ["I need to get organized", "ambiguous_request"],
+          ["Guests are coming Sunday. Help me prepare.", "actionable_household_request"],
+        ] as const)("classifies %s as %s", (message, expected) => {
+          expect(classifyIntent(message, false)).toBe(expected);
+        });
+
+        it("treats contextual references as follow-ups", () => {
+          expect(classifyIntent("Can you make it simpler?", true)).toBe("follow_up");
+        });
       });
     const a = await run();
     const b = await run();
@@ -80,33 +98,39 @@ describe("planner safety", () => {
   });
 });
 
-describe("bedrock provider", () => {
-  it("requires a model id", () => expect(() => new BedrockProvider({ modelId: "" })).toThrow());
+describe("Gemini provider", () => {
+  it("requires an API key", () => expect(() => new GeminiProvider({ apiKey: "" })).toThrow());
 
-  it("maps Converse tool-use responses", async () => {
+  it("maps Gemini function-call responses", async () => {
     const client = {
-      send: async () => ({
-        stopReason: "tool_use",
-        output: { message: { content: [{ text: "hi" }, { toolUse: { toolUseId: "t1", name: "get_household_context", input: {} } }] } },
-      }),
+      models: {
+        generateContent: async () => ({
+          candidates: [
+            {
+              finishReason: "STOP",
+              content: { parts: [{ text: "hi" }, { functionCall: { id: "t1", name: "get_household_context", args: {} }, thoughtSignature: "sig" }] },
+            },
+          ],
+        }),
+      },
     };
-    const p = new BedrockProvider({ modelId: "m", client: client as never });
+    const p = new GeminiProvider({ apiKey: "key", model: "m", client: client as never });
     const r = await p.generate({ system: "s", messages: [{ role: "user", content: [{ type: "text", text: "x" }] }], tools: [] });
     expect(r.stopReason).toBe("tool_use");
-    expect(r.content[1]).toMatchObject({ type: "tool_use", id: "t1", name: "get_household_context" });
+    expect(r.content[1]).toMatchObject({ type: "tool_use", id: "t1", name: "get_household_context", thoughtSignature: "sig" });
   });
 
   it("reports provider failures clearly", async () => {
-    const throttled = Object.assign(new Error("slow down"), { name: "ThrottlingException" });
-    const p = new BedrockProvider({
-      modelId: "m",
+    const throttled = Object.assign(new Error("slow down"), { status: 429 });
+    const p = new GeminiProvider({
+      apiKey: "key",
       client: {
-        send: async () => {
+        models: { generateContent: async () => {
           throw throttled;
-        },
+        } },
       } as never,
     });
     await expect(p.generate({ system: "", messages: [], tools: [] })).rejects.toMatchObject({ code: "PROVIDER_ERROR", httpStatus: 503 });
-    expect(mapBedrockError(Object.assign(new Error(), { name: "AccessDeniedException" })).message).toMatch(/denied/i);
+    expect(mapGeminiError(Object.assign(new Error(), { status: 403 })).message).toMatch(/rejected/i);
   });
 });

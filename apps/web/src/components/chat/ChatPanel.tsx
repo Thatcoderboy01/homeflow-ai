@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Bot, Loader2, MessageSquare, Send } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ApprovalDto } from "@homeflow/shared";
 import type { ChatEntry } from "../../types/ui";
 import { EmptyState, ErrorBanner, Panel } from "../layout/Panel";
@@ -40,12 +42,17 @@ export function ChatPanel({ entries, approval, busy, error, disabled, onSend, on
           {entries.length === 0 && (
             <EmptyState>
               Describe what your household needs. HomeFlow proposes a plan; nothing changes until you approve.
-              <button
-                onClick={() => setText(EXAMPLE)}
-                className="mt-3 block w-full rounded-lg bg-navy-900 px-3 py-2 text-xs font-medium text-white hover:bg-navy-800"
-              >
-                Try: “{EXAMPLE}”
-              </button>
+              <div className="mt-3 grid gap-2">
+                {[EXAMPLE, "Organize my household tasks.", "Help me plan my groceries.", "What can you help me with?"].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => setText(suggestion)}
+                    className="rounded-lg bg-navy-900 px-3 py-2 text-xs font-medium text-white hover:bg-navy-800"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
             </EmptyState>
           )}
           {entries.map((m) => (
@@ -56,10 +63,40 @@ export function ChatPanel({ entries, approval, busy, error, disabled, onSend, on
                 {m.role === "assistant" && m.provider && (
                   <p className="mb-1 flex items-center gap-1 text-[11px] font-medium text-slate-500">
                     <Bot className="size-3" aria-hidden />
-                    {m.provider.isMock ? "Mock AI (demo mode)" : `AI via ${m.provider.name}`}
+                    {m.provider.isMock ? "Test provider" : `AI via ${m.provider.name}`}
                   </p>
                 )}
-                {m.text}
+                {m.role === "assistant" ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ node: _node, ...props }) => (
+                        <a {...props} target="_blank" rel="noreferrer" className="font-medium text-teal-700 underline underline-offset-2 hover:text-teal-900" />
+                      ),
+                      code: ({ node: _node, className, children, ...props }) => {
+                        const inline = !className;
+                        return inline ? (
+                          <code {...props} className="rounded bg-slate-200 px-1 py-0.5 font-mono text-[0.9em]">
+                            {children}
+                          </code>
+                        ) : (
+                          <code {...props} className="block overflow-x-auto rounded-lg bg-navy-950 p-3 font-mono text-xs text-slate-100">
+                            {children}
+                          </code>
+                        );
+                      },
+                      pre: ({ node: _node, children }) => <pre className="my-2 overflow-x-auto">{children}</pre>,
+                      p: ({ node: _node, children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      ul: ({ node: _node, children }) => <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>,
+                      ol: ({ node: _node, children }) => <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>,
+                      li: ({ node: _node, children }) => <li>{children}</li>,
+                    }}
+                  >
+                    {m.text}
+                  </ReactMarkdown>
+                ) : (
+                  m.text
+                )}
               </div>
             </div>
           ))}

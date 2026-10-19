@@ -26,13 +26,13 @@ See README. Three processes (`npm run dev`): web :5173, API :4000, MCP :4100, pl
 | `TEST_DATABASE_URL`                                                         | tests            | database name must end in `_test`; **dropped on every run**                                      |
 | `API_HOST`, `API_PORT`, `CORS_ORIGINS`, `LOG_LEVEL`, `APPROVAL_TTL_SECONDS` | API              |                                                                                                  |
 | `MCP_HOST`, `MCP_PORT`, `MCP_URL`, `MCP_AUTH_TOKEN`, `MCP_ALLOWED_ORIGINS`  | API + MCP        | token ≥ 16 chars, same value in both                                                             |
-| `AI_PROVIDER`                                                               | API              | `mock` (default) or `bedrock`                                                                    |
-| `AWS_REGION`, `BEDROCK_MODEL_ID`, `AI_TIMEOUT_MS`                           | API              | Bedrock only. Credentials via the AWS chain (use an **instance role** on EC2; no keys in `.env`) |
+| `AI_PROVIDER`                                                               | API              | `mock` (default) or `gemini`                                                                     |
+| `GEMINI_API_KEY`, `GEMINI_MODEL`, `AI_TIMEOUT_MS`                           | API              | Gemini only. Keep the API key in a server-side secret manager and never in the browser           |
 | `VITE_API_BASE_URL`                                                         | web (build time) | public value; never put secrets in `VITE_*`                                                      |
 
-## IAM for Bedrock
+## Google Gemini
 
-Instance role with `bedrock:InvokeModel` (Converse uses it) restricted to the single model ARN. Request model access in the Bedrock console for your region first; verify that the chosen model supports tool use in the Converse API.
+Set `GEMINI_MODEL=gemini-3.5-flash-lite` initially. Verify that the configured Gemini API key can access the model before enabling it in a deployment.
 
 ## Database backups & security
 
@@ -42,4 +42,4 @@ Instance role with `bedrock:InvokeModel` (Converse uses it) restricted to the si
 
 ## Cost control
 
-Single small instance; stop it outside demo windows; set an AWS Budget alert; cap `maxTokens` (2048 in `BedrockProvider`) and the `/agent` rate limit; use a small/cheap model; prefer `AI_PROVIDER=mock` for UI work and tests.
+Use quota and billing alerts; cap generated output at 2048 tokens in `GeminiProvider` and keep the `/agent` rate limit. The application runtime requires `AI_PROVIDER=gemini`; mocks are injected only by automated tests.

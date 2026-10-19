@@ -9,7 +9,7 @@ flowchart LR
   user([Family member]) -->|browser| web[HomeFlow Web<br/>React + Vite]
   web -->|REST /api/v1| api[HomeFlow API<br/>Express]
   api -->|MCP Streamable HTTP| mcp[HomeFlow MCP Server]
-  api -->|Converse API, optional| bedrock[(Amazon Bedrock)]
+  api -->|Google Gen AI API, optional| gemini[(Google Gemini)]
   api --> db[(MySQL)]
   mcp --> db
   alexa[[Alexa+ experience<br/>NOT connected in this starter]] -.->|future MCP client| mcp
@@ -32,7 +32,7 @@ flowchart TB
   subgraph Agent["packages/agent"]
     planner[runPlanner loop] --> provider{{LlmProvider}}
     provider --> mock[MockProvider]
-    provider --> bedrock[BedrockProvider]
+    provider --> gemini[GeminiProvider]
     mcpClient[McpToolClient]
   end
   subgraph MCP["apps/mcp-server"]
@@ -56,7 +56,7 @@ flowchart TB
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | **Express API**                        | Validation, CORS, rate limiting, error shaping, resolving the household, orchestrating plan/approve/reject. | Let the model or browser pick the household or run state-changing tools directly.             |
 | **Agent orchestration** (`runPlanner`) | Tool-calling loop with the LLM; injects `householdId`; validates the proposed plan.                         | Expose write tools to the model.                                                              |
-| **LLM provider**                       | Translate to/from a model API (Bedrock Converse, or the deterministic mock).                                | Hold household data or fall back silently to mock.                                            |
+| **LLM provider**                       | Translate to/from the Google Gemini API (or the deterministic mock).                                         | Hold household data or fall back silently to mock.                                             |
 | **MCP client** (`McpToolClient`)       | Calls MCP tools over Streamable HTTP with a bearer token.                                                   | Bypass the MCP server to write data.                                                          |
 | **MCP server**                         | Exposes three explicit tools; validates input; verifies approvals for write tools.                          | Replace the API (no sessions, users, or UI logic); run arbitrary SQL or touch the filesystem. |
 | **Tool handlers**                      | Parse input, verify the approval, call a database service, return structured JSON.                          | Contain business rules that belong in services.                                               |
@@ -111,7 +111,7 @@ flowchart LR
     api --> db[(MySQL on EC2 or RDS)]
     mcp --> db
   end
-  api -.->|IAM role| bedrock[(Bedrock)]
+  api -.->|Server-side API key| gemini[(Google Gemini)]
 ```
 
 MCP stays on loopback unless a remote MCP client (e.g. a real Alexa+ integration) must reach it; then expose only `/mcp` over HTTPS with proper authentication. See [DEPLOYMENT.md](DEPLOYMENT.md).

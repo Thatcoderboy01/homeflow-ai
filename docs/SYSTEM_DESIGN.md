@@ -8,7 +8,7 @@ Families coordinate chores, shopping and events across chats, notes and memory. 
 
 | #   | Requirement                                                   | Status in this starter                                                                      |
 | --- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| F1  | Chat request → structured plan (tasks + groceries)            | Implemented (mock provider verified; Bedrock code path unit-tested with a fake client only) |
+| F1  | Chat request → structured plan (tasks + groceries)            | Implemented (mock provider verified; Gemini code path unit-tested with a fake client) |
 | F2  | Retrieve saved household context and existing tasks           | Implemented via MCP `get_household_context`                                                 |
 | F3  | Show a preview and require explicit approve/reject            | Implemented                                                                                 |
 | F4  | Execute approved actions through validated MCP tools          | Implemented                                                                                 |

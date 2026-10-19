@@ -27,7 +27,7 @@ export function LoadingState({ label }: { label: string }) {
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">{children}</p>;
+  return <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">{children}</div>;
 }
 
 export function ErrorBanner({ message, onRetry }: { message: string; onRetry?: () => void }) {

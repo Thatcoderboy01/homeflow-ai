@@ -88,7 +88,7 @@ for what has and has not been tested):
 - Household context (preferences, members, open tasks, grocery list) read via MCP.
 - Task planning and grocery list with duplicate-safe updates.
 - Self-hosted **MCP server** using the official TypeScript SDK, Streamable HTTP, bearer-token auth.
-- Pluggable AI provider: deterministic **mock** (default, no credentials) or **Amazon Bedrock**.
+- Google Gemini is the only configured application runtime provider. A deterministic **mock** provider remains available for isolated automated tests.
 - Idempotent, server-validated approvals: expiry, no reuse, no double execution.
 
 **Not included:** voice, payments, smart-home control, multi-user permissions, authentication.
@@ -139,16 +139,16 @@ Full detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
     Keep the database on loopback or private networking, or use TLS. Re-run
     `npm audit` and update Prisma before any public deployment.
 
-## AI providers: mock vs Amazon Bedrock
+## AI providers: mock vs Google Gemini
 
-| | Mock (default) | Amazon Bedrock |
+| | Mock (tests only) | Google Gemini |
 | --- | --- | --- |
-| Selected by | `AI_PROVIDER=mock` | `AI_PROVIDER=bedrock` |
-| Credentials | None | Standard AWS credential chain |
-| Config | None | `AWS_REGION`, `BEDROCK_MODEL_ID` (Converse tool-use capable, with access) |
-| Behavior | Deterministic. Hosting-style requests ("guests", "party", ...) get a fixed plan; anything else gets one generic follow-up task. **Not an LLM.** The UI labels it "Mock AI (demo)". | Implemented against the Converse API |
+| Selected by | Direct test dependency injection | `AI_PROVIDER=gemini` |
+| Credentials | None | `GEMINI_API_KEY` |
+| Config | None | `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.5-flash-lite`) |
+| Behavior | Deterministic test fixture only. **Not an LLM.** | Gemini function calling produces validated proposals; writes still require approval |
 | Failures | n/a | Reported as `502 PROVIDER_ERROR`; **no silent fallback** to mock |
-| Verification | Automated tests | Fake-client tests only. **Not tested against live Bedrock.** |
+| Verification | Automated tests | Fake-client tests; live verification requires a configured API key |
 
 To add a provider, implement `LlmProvider` in `packages/agent/src/providers/types.ts`
 and register it in `createProvider`.
@@ -244,15 +244,17 @@ the server at runtime for every context read and every executed action.
 
 ## Verification status
 
-Status as of authoring, **14 Oct 2026**.
+Status verified **19 Oct 2026**.
 
 **Verified** in the authoring sandbox (Node 22, MariaDB 10.11):
 
 - typecheck and lint
-- 48 automated tests: shared schemas, DB services, MCP tools over real Streamable HTTP,
+- 49 automated tests: shared schemas, DB services, MCP tools over real Streamable HTTP,
   API (approval, rejection, expiry, repeat, tamper, CORS, validation), mock planner,
-  and the Bedrock provider with a fake client
+  and the Gemini provider with a fake client
 - production builds of all three apps
+- live Gemini planning with `gemini-3.5-flash-lite`, approval execution through MCP,
+  persisted tasks/groceries, and rejection without database writes
 - a manual run of the built API and MCP with curl: plan → approve → repeat approve,
   tasks 4 → 8, groceries deduplicated
 - Vite dev server serving the app; CORS preflight
@@ -263,7 +265,6 @@ Status as of authoring, **14 Oct 2026**.
 - `prisma migrate dev` / `deploy` (the schema engine could not be downloaded in the sandbox;
   the initial migration SQL is hand-written)
 - the UI in a real browser (builds and typechecks only)
-- live Amazon Bedrock calls
 - `docker compose` / Podman
 - the GitHub Actions workflow
 - any AWS deployment
@@ -273,11 +274,10 @@ Status as of authoring, **14 Oct 2026**.
 
 | Status | Item |
 | --- | --- |
-| Implemented | Plan → approve/reject → execute flow, MCP server, mock and Bedrock providers, persisted dashboard, approval validation |
+| Implemented | Gemini-backed plan → approve/reject → execute flow, MCP server, persisted dashboard, approval validation |
 | In progress | Confirm Alexa+ eligibility and demo requirements |
 | Planned | Verify migrations on MySQL 8.4 and Podman/Docker compose |
 | Planned | Verify the UI in a real browser |
-| Planned | Verify against live Amazon Bedrock |
 | Planned | Recovery job for approvals stuck in `APPROVED` after a crash |
 | Planned | MCP session reuse |
 | Planned | Multi-turn planner memory and richer household memory |

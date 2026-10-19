@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "^3.1000.0",
+    "@google/genai": "^1.21.0",
     "@homeflow/shared": "*",
     "@modelcontextprotocol/sdk": "^1.32.0",
     "zod": "^4.0.0"

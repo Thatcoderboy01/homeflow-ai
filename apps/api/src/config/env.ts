@@ -9,17 +9,17 @@ const schema = z.object({
   APPROVAL_TTL_SECONDS: z.coerce.number().int().min(30).max(86_400).default(900),
   MCP_URL: z.string().url().default("http://127.0.0.1:4100/mcp"),
   MCP_AUTH_TOKEN: z.string().min(16, "MCP_AUTH_TOKEN must be at least 16 characters"),
-  AI_PROVIDER: z.enum(["mock", "bedrock"]).default("mock"),
-  AWS_REGION: z.string().optional(),
-  BEDROCK_MODEL_ID: z.string().optional(),
+  AI_PROVIDER: z.literal("gemini").default("gemini"),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().default("gemini-3.5-flash-lite"),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
 });
 export type ApiConfig = z.infer<typeof schema> & { corsOrigins: string[] };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
-  const cfg = schema.parse({ ...env, AWS_REGION: env.AWS_REGION || undefined, BEDROCK_MODEL_ID: env.BEDROCK_MODEL_ID || undefined });
-  if (cfg.AI_PROVIDER === "bedrock" && !cfg.BEDROCK_MODEL_ID) {
-    throw new Error("AI_PROVIDER=bedrock requires BEDROCK_MODEL_ID (and Bedrock model access in your AWS account).");
+  const cfg = schema.parse({ ...env, GEMINI_API_KEY: env.GEMINI_API_KEY || undefined });
+  if (cfg.AI_PROVIDER === "gemini" && !cfg.GEMINI_API_KEY) {
+    throw new Error("AI_PROVIDER=gemini requires GEMINI_API_KEY.");
   }
   if (cfg.NODE_ENV === "production" && cfg.MCP_AUTH_TOKEN.startsWith("change-me")) {
     throw new Error("Refusing to start in production with the placeholder MCP_AUTH_TOKEN");

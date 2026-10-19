@@ -52,7 +52,7 @@ export interface PlanResponseDto {
   conversationId: string;
   assistantMessage: string;
   provider: { name: string; isMock: boolean };
-  approval: ApprovalDto;
+  approval: ApprovalDto | null;
 }
 
 export interface DecisionResponseDto {

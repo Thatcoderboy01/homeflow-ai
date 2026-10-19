@@ -9,8 +9,8 @@ const logger = pino({ level: config.LOG_LEVEL, redact: ["req.headers.authorizati
 
 const provider = createProvider({
   provider: config.AI_PROVIDER,
-  region: config.AWS_REGION,
-  bedrockModelId: config.BEDROCK_MODEL_ID,
+  geminiApiKey: config.GEMINI_API_KEY,
+  geminiModel: config.GEMINI_MODEL,
   timeoutMs: config.AI_TIMEOUT_MS,
 });
 const mcp = new McpToolClient({ url: config.MCP_URL, authToken: config.MCP_AUTH_TOKEN });

@@ -14,7 +14,7 @@
 | Model isolation       | Model sees one read tool and a pseudo-tool; household id injected server-side; write tools unreachable. Household data is labelled as data in the prompt.                                       |
 | MCP                   | Bearer token (≥16 chars, placeholder refused in production), Origin allow-list, 100 KB body limit, no sessions, three fixed tools.                                                              |
 | API                   | Helmet, CORS allow-list, 20 KB body limit, per-IP rate limit on `/agent`, Zod validation, safe error bodies (no stacks/SQL).                                                                    |
-| Secrets               | `.env` is git-ignored; `.env.example` has placeholders only; logs redact auth headers; Bedrock credentials come from the AWS credential chain on the server, never the browser.                 |
+| Secrets               | `.env` is git-ignored; `.env.example` has placeholders only; logs redact auth headers; the Gemini API key is read server-side and never sent to the browser. |
 | Provider honesty      | No silent fallback from a real provider to mock; mock output is labelled in API and UI.                                                                                                         |
 
 ## Production work still required
@@ -24,6 +24,6 @@
 3. CSRF/session hardening once cookies are used; stricter CSP for the web app.
 4. Recovery job for approvals stuck in `APPROVED` after a crash; retention policy for messages/approvals.
 5. Prompt-injection hardening: tasks/notes are user-controlled text fed to the model. The approval preview is the main defence; add content limits and review for any future write tools.
-6. Rate limits per user, cost controls for Bedrock (max tokens, budgets/alarms).
-7. Dependency audit (`npm audit`) and pinning in CI; secrets in AWS Secrets Manager / SSM; least-privilege IAM (`bedrock:InvokeModel` for one model only); encrypted database with backups.
+6. Rate limits per user, cost controls for Gemini (max output tokens, quotas/alarms).
+7. Dependency audit (`npm audit`) and pinning in CI; secrets in a server-side secret manager; encrypted database with backups.
 8. Privacy review: household data is personal data; define retention and deletion.
