@@ -17,7 +17,7 @@ export function useAssistant(onDataChanged: () => void) {
   const [busy, setBusy] = useState<Busy>("idle");
   const [error, setError] = useState<string | undefined>();
 
-  const push = (e: Omit<ChatEntry, "id">) => setEntries((prev) => [...prev, { ...e, id: crypto.randomUUID() }]);
+  const push = (entry: Omit<ChatEntry, "id">) => setEntries((previous) => [...previous, { ...entry, id: crypto.randomUUID() }]);
 
   const send = useCallback(
     async (message: string) => {
@@ -25,10 +25,10 @@ export function useAssistant(onDataChanged: () => void) {
       setBusy("planning");
       push({ role: "user", text: message });
       try {
-        const res = await api.plan(message, conversationId);
-        setConversationId(res.conversationId);
-        setApproval(res.approval ?? undefined);
-        push({ role: "assistant", text: res.assistantMessage, provider: res.provider });
+        const response = await api.plan(message, conversationId);
+        setConversationId(response.conversationId);
+        setApproval(response.approval ?? undefined);
+        push({ role: "assistant", text: response.assistantMessage, provider: response.provider });
       } catch (e) {
         setError(errorMessage(e));
       } finally {
@@ -44,25 +44,24 @@ export function useAssistant(onDataChanged: () => void) {
       setError(undefined);
       setBusy(kind === "approve" ? "approving" : "rejecting");
       try {
-        const res = kind === "approve" ? await api.approve(approval.id) : await api.reject(approval.id);
-        setApproval(res.approval);
-        if (kind === "reject") push({ role: "system", text: "Plan rejected. Nothing was changed." });
-        else {
-          const results = res.approval.results ?? [];
-          const ok = results.filter((r) => r.ok).length;
+        const response = kind === "approve" ? await api.approve(approval.id) : await api.reject(approval.id);
+        setApproval(response.approval);
+        if (kind === "reject") {
+          push({ role: "system", text: "Plan rejected. Nothing was changed." });
+        } else {
+          const results = response.approval.results ?? [];
+          const completed = results.filter((result) => result.ok).length;
           push({
             role: "system",
-            text: res.executedNow
-              ? `Backend confirmed: ${ok} of ${results.length} actions completed.`
+            text: response.executedNow
+              ? `Backend confirmed: ${completed} of ${results.length} actions completed.`
               : "This plan was already approved; nothing new was executed.",
           });
           onDataChanged();
         }
       } catch (e) {
         setError(errorMessage(e));
-        // The approval may have expired or changed: re-sync its real state.
-        api
-          .approval(approval.id)
+        api.approval(approval.id)
           .then(setApproval)
           .catch(() => undefined);
       } finally {

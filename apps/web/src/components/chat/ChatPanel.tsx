@@ -1,13 +1,20 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Bot, Loader2, MessageSquare, Send } from "lucide-react";
+import { Bot, ClipboardList, Loader2, MessageSquare, Send, ShoppingBasket, Sparkles, Users, type LucideIcon } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ApprovalDto } from "@homeflow/shared";
 import type { ChatEntry } from "../../types/ui";
-import { EmptyState, ErrorBanner, Panel } from "../layout/Panel";
+import { ErrorBanner, Panel } from "../layout/Panel";
 import { PlanPreview } from "./PlanPreview";
 
 const EXAMPLE = "Guests are coming on Sunday. Help me prepare.";
+
+const SUGGESTIONS: { text: string; icon: LucideIcon; tint: string }[] = [
+  { text: EXAMPLE, icon: Users, tint: "bg-pink-50 text-pink-500" },
+  { text: "Organize my household tasks.", icon: ClipboardList, tint: "bg-blue-50 text-blue-600" },
+  { text: "Help me plan my groceries.", icon: ShoppingBasket, tint: "bg-teal-50 text-teal-600" },
+  { text: "What can you help me with?", icon: Sparkles, tint: "bg-amber-50 text-amber-600" },
+];
 
 interface Props {
   entries: ChatEntry[];
@@ -23,6 +30,7 @@ interface Props {
 export function ChatPanel({ entries, approval, busy, error, disabled, onSend, onApprove, onReject }: Props) {
   const [text, setText] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
   }, [entries.length, approval?.status, busy]);
@@ -36,33 +44,57 @@ export function ChatPanel({ entries, approval, busy, error, disabled, onSend, on
   };
 
   return (
-    <Panel title="Assistant" icon={<MessageSquare className="size-4" />}>
-      <div className="flex min-h-[28rem] flex-col gap-3">
-        <div className="flex-1 space-y-3 overflow-y-auto" role="log" aria-live="polite" aria-label="Conversation">
+    <Panel
+      id="assistant"
+      title="Assistant"
+      description="Describe what your household needs. HomeFlow drafts a plan for you to approve."
+      icon={<MessageSquare className="size-5" />}
+      className="h-full"
+    >
+      <div className="flex flex-1 flex-col gap-4">
+        <div
+          className="scroll-soft max-h-[32rem] min-h-[14rem] flex-1 space-y-4 overflow-y-auto pr-1"
+          role="log"
+          aria-live="polite"
+          aria-label="Conversation"
+        >
           {entries.length === 0 && (
-            <EmptyState>
-              Describe what your household needs. HomeFlow proposes a plan; nothing changes until you approve.
-              <div className="mt-3 grid gap-2">
-                {[EXAMPLE, "Organize my household tasks.", "Help me plan my groceries.", "What can you help me with?"].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => setText(suggestion)}
-                    className="rounded-lg bg-navy-900 px-3 py-2 text-xs font-medium text-white hover:bg-navy-800"
-                  >
-                    {suggestion}
-                  </button>
+            <div className="rounded-2xl bg-slate-50/80 p-4 sm:p-5">
+              <p className="text-sm font-medium text-slate-700">Try asking</p>
+              <p className="mt-0.5 text-xs text-slate-500">Nothing changes until you approve a proposed plan.</p>
+              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+                {SUGGESTIONS.map(({ text: suggestion, icon: Icon, tint }) => (
+                  <li key={suggestion}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setText(suggestion);
+                        inputRef.current?.focus();
+                      }}
+                      className="flex h-full w-full items-start gap-3 rounded-2xl border border-slate-200/70 bg-white p-3.5 text-left shadow-card transition hover:-translate-y-px hover:border-teal-200"
+                    >
+                      <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${tint}`} aria-hidden>
+                        <Icon className="size-[18px]" />
+                      </span>
+                      <span className="pt-1.5 text-sm font-medium leading-snug text-navy-900">{suggestion}</span>
+                    </button>
+                  </li>
                 ))}
-              </div>
-            </EmptyState>
+              </ul>
+            </div>
           )}
           {entries.map((m) => (
-            <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex"}>
+            <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex items-start gap-2.5"}>
+              {m.role === "assistant" && (
+                <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-600" aria-hidden>
+                  <Bot className="size-4" />
+                </span>
+              )}
               <div
-                className={`max-w-[88%] rounded-2xl px-3.5 py-2 text-sm ${m.role === "user" ? "bg-navy-900 text-white" : m.role === "system" ? "bg-slate-100 text-slate-700" : "bg-teal-50 text-navy-900 ring-1 ring-teal-100"}`}
+                className={`max-w-[88%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.role === "user" ? "rounded-br-md bg-navy-900 text-white" : m.role === "system" ? "bg-slate-100 text-slate-700" : "rounded-tl-md bg-slate-50 text-navy-900 ring-1 ring-slate-200/80"}`}
               >
                 {m.role === "assistant" && m.provider && (
-                  <p className="mb-1 flex items-center gap-1 text-[11px] font-medium text-slate-500">
-                    <Bot className="size-3" aria-hidden />
+                  <p className="mb-1 text-[11px] font-medium text-slate-500">
                     {m.provider.isMock ? "Test provider" : `AI via ${m.provider.name}`}
                   </p>
                 )}
@@ -109,12 +141,13 @@ export function ChatPanel({ entries, approval, busy, error, disabled, onSend, on
           <div ref={endRef} />
         </div>
         {error && <ErrorBanner message={error} />}
-        <form onSubmit={submit} className="flex items-end gap-2">
+        <form onSubmit={submit} className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-card focus-within:border-teal-400 focus-within:ring-2 focus-within:ring-teal-500/25">
           <label htmlFor="msg" className="sr-only">
             Message the assistant
           </label>
           <textarea
             id="msg"
+            ref={inputRef}
             rows={2}
             value={text}
             maxLength={2000}
@@ -123,16 +156,17 @@ export function ChatPanel({ entries, approval, busy, error, disabled, onSend, on
               if (e.key === "Enter" && !e.shiftKey) submit(e);
             }}
             placeholder="e.g. Guests are coming on Sunday. Help me prepare."
-            className="flex-1 resize-none rounded-xl border border-slate-300 px-3 py-2 text-sm placeholder:text-slate-400"
+            className="flex-1 resize-none bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-slate-400"
           />
           <button
             type="submit"
             disabled={!text.trim() || busy !== "idle" || disabled}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="size-4" aria-hidden /> Send
           </button>
         </form>
+        <p className="-mt-2 px-1 text-[11px] text-slate-400">Enter to send · Shift+Enter for a new line</p>
       </div>
     </Panel>
   );

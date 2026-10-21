@@ -1,12 +1,11 @@
 import type { HealthDto } from "@homeflow/shared";
-import { Home } from "lucide-react";
 
 type Props = { health?: HealthDto; healthError?: string; loading: boolean };
 
 function Dot({ ok, label }: { ok: boolean | undefined; label: string }) {
-  const color = ok === undefined ? "bg-slate-400" : ok ? "bg-teal-400" : "bg-red-400";
+  const color = ok === undefined ? "bg-slate-300" : ok ? "bg-emerald-500" : "bg-red-500";
   return (
-    <span className="flex items-center gap-1.5 text-xs text-slate-200">
+    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
       <span className={`size-2 rounded-full ${color}`} aria-hidden />
       {label}
       <span className="sr-only">{ok === undefined ? "unknown" : ok ? "up" : "down"}</span>
@@ -14,35 +13,34 @@ function Dot({ ok, label }: { ok: boolean | undefined; label: string }) {
   );
 }
 
+function greeting(): string {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+}
+
 export function Header({ health, healthError, loading }: Props) {
   const apiUp = health ? true : healthError ? false : undefined;
   return (
-    <header className="bg-navy-900 text-white">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-xl bg-teal-500 text-navy-950">
-            <Home className="size-5" aria-hidden />
+    <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-navy-900 sm:text-3xl">{greeting()}!</h1>
+        <p className="mt-1 text-sm text-slate-600">What does your household need today?</p>
+      </div>
+      <div
+        className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-full border border-slate-200/70 bg-white px-4 py-2 shadow-card"
+        aria-live="polite"
+        aria-label="System status"
+      >
+        {health && (
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${health.ai.isMock ? "bg-amber-100 text-amber-800" : "bg-teal-50 text-teal-700"}`}
+          >
+            {health.ai.isMock ? "Test provider" : `AI: ${health.ai.provider}`}
           </span>
-          <div>
-            <h1 className="text-base font-semibold leading-tight">HomeFlow AI</h1>
-            <p className="text-xs text-slate-300">Your family&apos;s action agent</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" aria-live="polite" aria-label="System status">
-          <span className="rounded-full border border-teal-300/50 bg-teal-300/10 px-2.5 py-0.5 text-xs font-medium text-teal-100">
-          Approval-first workspace
-          </span>
-          {health && (
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${health.ai.isMock ? "bg-amber-300 text-navy-950" : "bg-teal-400 text-navy-950"}`}
-            >
-              {health.ai.isMock ? "Test provider" : `AI: ${health.ai.provider}`}
-            </span>
-          )}
-          <Dot ok={loading ? undefined : apiUp} label="API" />
-          <Dot ok={health ? health.checks.database === "up" : undefined} label="Database" />
-          <Dot ok={health ? health.checks.mcp === "up" : undefined} label="MCP tools" />
-        </div>
+        )}
+        <Dot ok={loading ? undefined : apiUp} label="API" />
+        <Dot ok={health ? health.checks.database === "up" : undefined} label="Database" />
+        <Dot ok={health ? health.checks.mcp === "up" : undefined} label="MCP tools" />
       </div>
     </header>
   );
