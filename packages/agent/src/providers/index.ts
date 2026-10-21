@@ -5,8 +5,19 @@ import type { LlmProvider } from "./types.js";
 export * from "./types.js";
 export { MockProvider, nextWeekday } from "./mock.js";
 export { GeminiProvider, mapGeminiError } from "./gemini.js";
-export { GeminiSpeechSynthesizer, mapSpeechError } from "./speech.js";
-export type { GeminiSpeechSynthesizerOptions, SpeechSynthesizer } from "./speech.js";
+export {
+  ElevenLabsSpeechSynthesizer,
+  FallbackSpeechSynthesizer,
+  GeminiSpeechSynthesizer,
+  mapElevenLabsError,
+  mapSpeechError,
+} from "./speech.js";
+export type {
+  ElevenLabsSpeechSynthesizerOptions,
+  FallbackSpeechSynthesizerOptions,
+  GeminiSpeechSynthesizerOptions,
+  SpeechSynthesizer,
+} from "./speech.js";
 
 export interface ProviderConfig {
   provider: "mock" | "gemini";

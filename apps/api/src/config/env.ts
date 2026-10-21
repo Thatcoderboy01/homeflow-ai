@@ -14,6 +14,9 @@ const schema = z.object({
   GEMINI_MODEL: z.string().default("gemini-3.5-flash-lite"),
   GEMINI_TTS_MODEL: z.string().default("gemini-2.5-flash-preview-tts"),
   GEMINI_TTS_VOICE: z.string().default("Kore"),
+  ELEVENLABS_API_KEY: z.string().optional(),
+  ELEVENLABS_VOICE_ID: z.string().optional(),
+  ELEVENLABS_TTS_MODEL: z.string().default("eleven_multilingual_v2"),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
 });
 export type ApiConfig = z.infer<typeof schema> & { corsOrigins: string[] };
@@ -22,6 +25,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   const cfg = schema.parse({ ...env, GEMINI_API_KEY: env.GEMINI_API_KEY || undefined });
   if (cfg.AI_PROVIDER === "gemini" && !cfg.GEMINI_API_KEY) {
     throw new Error("AI_PROVIDER=gemini requires GEMINI_API_KEY.");
+  }
+  if (cfg.ELEVENLABS_API_KEY && !cfg.ELEVENLABS_VOICE_ID) {
+    throw new Error("ELEVENLABS_API_KEY requires ELEVENLABS_VOICE_ID.");
   }
   if (cfg.NODE_ENV === "production" && cfg.MCP_AUTH_TOKEN.startsWith("change-me")) {
     throw new Error("Refusing to start in production with the placeholder MCP_AUTH_TOKEN");

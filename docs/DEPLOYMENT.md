@@ -28,13 +28,20 @@ See README. Three processes (`npm run dev`): web :5173, API :4000, MCP :4100, pl
 | `MCP_HOST`, `MCP_PORT`, `MCP_URL`, `MCP_AUTH_TOKEN`, `MCP_ALLOWED_ORIGINS`  | API + MCP        | token ≥ 16 chars, same value in both                                                             |
 | `AI_PROVIDER`                                                               | API              | `mock` (default) or `gemini`                                                                     |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_TTS_MODEL`, `GEMINI_TTS_VOICE`, `AI_TIMEOUT_MS` | API | Gemini only. Keep the API key in a server-side secret manager and never in the browser |
+| `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, `ELEVENLABS_TTS_MODEL` | API | Optional fallback TTS. Keep credentials server-side; used only after Gemini TTS fails |
 | `VITE_API_BASE_URL`                                                         | web (build time) | public value; never put secrets in `VITE_*`                                                      |
 
 ## Google Gemini
 
 Set `GEMINI_MODEL=gemini-3.5-flash-lite` initially. Voice output uses the server-side `gemini-2.5-flash-preview-tts` model with the `Kore` voice by default. Verify that the configured Gemini API key can access both models before enabling voice in a deployment.
 
-If the voice endpoint returns `VOICE_QUOTA_EXCEEDED`, the Gemini project has exhausted its TTS quota. Enable billing or request/increase the applicable Generative Language API quota, or wait for the provider's reset window; changing browser settings cannot resolve this provider-side condition. Restart the API after changing the server-side key, project, or TTS model configuration.
+If Gemini TTS returns `VOICE_QUOTA_EXCEEDED`, the Gemini project has exhausted its TTS quota. With ElevenLabs configured, the API tries that secondary provider automatically; otherwise the web app uses browser speech. Enable billing or request/increase the applicable Generative Language API quota, or wait for the provider's reset window; changing browser settings cannot resolve this provider-side condition. Restart the API after changing the server-side key, project, or TTS model configuration.
+
+## ElevenLabs fallback
+
+Set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` on the API server to enable the secondary provider. Create an account at [elevenlabs.io](https://elevenlabs.io), copy an API key from your profile/API settings, and copy the ID of a voice from Voices/Voice Library. The default `eleven_multilingual_v2` model returns MP3 audio that the existing browser player can play. Gemini remains primary; ElevenLabs is called only after an eligible Gemini quota, timeout, or transient provider failure. If ElevenLabs credentials are missing, Gemini continues to work normally.
+
+Check the ElevenLabs subscription/usage page before demos to monitor free characters and reset dates. Free-plan limits vary by account and region; when credits are exhausted, the API returns a quota response and HomeFlow falls back to browser speech without retrying indefinitely.
 
 ## Database backups & security
 
