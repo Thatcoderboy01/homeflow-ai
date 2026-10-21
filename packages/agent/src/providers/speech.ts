@@ -1,4 +1,5 @@
 import { GoogleGenAI, Modality } from "@google/genai";
+import { DomainError } from "@homeflow/shared";
 
 const DEFAULT_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 const VOICE_PERSONA =
@@ -27,27 +28,46 @@ export class GeminiSpeechSynthesizer implements SpeechSynthesizer {
   async synthesize(text: string, signal?: AbortSignal): Promise<{ audio: Buffer; mimeType: string }> {
     const timeout = AbortSignal.timeout(this.options.timeoutMs ?? 30_000);
     const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
-    const response = await Promise.race([
-      this.client.models.generateContent({
-        model: this.options.model ?? DEFAULT_TTS_MODEL,
-        contents: `${VOICE_PERSONA}\n\nSpeak this response naturally:\n${text}`,
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: this.options.voiceName ?? "Kore" },
+    try {
+      const response = await Promise.race([
+        this.client.models.generateContent({
+          model: this.options.model ?? DEFAULT_TTS_MODEL,
+          contents: `${VOICE_PERSONA}\n\nSpeak this response naturally:\n${text}`,
+          config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: this.options.voiceName ?? "Kore" },
+              },
             },
           },
-        },
-      }),
-      abortOnSignal(requestSignal),
-    ]);
-    const audioPart = response.candidates?.[0]?.content?.parts?.find((part) => part.inlineData?.data);
-    const encoded = audioPart?.inlineData?.data;
-    if (!encoded) throw new Error("The Gemini speech provider returned no audio.");
-    const mimeType = audioPart.inlineData?.mimeType ?? "audio/L16;rate=24000";
-    return { audio: pcmToWav(Buffer.from(encoded, "base64"), mimeType), mimeType: "audio/wav" };
+        }),
+        abortOnSignal(requestSignal),
+      ]);
+      const audioPart = response.candidates?.[0]?.content?.parts?.find((part) => part.inlineData?.data);
+      const encoded = audioPart?.inlineData?.data;
+      if (!encoded) throw new DomainError("PROVIDER_ERROR", "The speech provider returned no audio.", 502);
+      const mimeType = audioPart.inlineData?.mimeType ?? "audio/L16;rate=24000";
+      return { audio: pcmToWav(Buffer.from(encoded, "base64"), mimeType), mimeType: "audio/wav" };
+    } catch (error) {
+      throw mapSpeechError(error);
+    }
   }
+}
+
+export function mapSpeechError(error: unknown): DomainError {
+  if (error instanceof DomainError) return error;
+  const status = (error as { status?: number; code?: number }).status ?? (error as { code?: number }).code;
+  const message = error instanceof Error ? error.message : String(error);
+  if (status === 429 || message.includes("RESOURCE_EXHAUSTED") || message.includes("quota")) {
+    return new DomainError("VOICE_QUOTA_EXCEEDED", "Natural voice is temporarily unavailable because the Gemini speech quota is exhausted. Enable billing or wait for the quota to reset.", 503);
+  }
+  if (status === 401 || status === 403) return new DomainError("VOICE_AUTH_ERROR", "Natural voice is not authorized for the configured Gemini project.", 503);
+  if (status === 404) return new DomainError("VOICE_MODEL_NOT_FOUND", "The configured Gemini speech model is unavailable. Check GEMINI_TTS_MODEL.", 503);
+  if ((error as { name?: string }).name === "AbortError" || (error as { name?: string }).name === "TimeoutError") {
+    return new DomainError("VOICE_TIMEOUT", "Natural voice generation timed out. Try again.", 504);
+  }
+  return new DomainError("VOICE_PROVIDER_ERROR", "Natural voice generation failed. Check the API server logs for provider details.", 503);
 }
 
 function pcmToWav(pcm: Buffer, mimeType: string): Buffer {

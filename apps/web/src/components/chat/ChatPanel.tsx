@@ -25,15 +25,16 @@ interface Props {
   error?: string;
   disabled?: boolean;
   onSend: (m: string) => void;
+  onVoiceSend: (m: string) => void;
   onApprove: () => void;
   onReject: () => void;
 }
 
-export function ChatPanel({ entries, approval, busy, error, disabled, onSend, onApprove, onReject }: Props) {
+export function ChatPanel({ entries, approval, busy, error, disabled, onSend, onVoiceSend, onApprove, onReject }: Props) {
   const [text, setText] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const voice = useVoiceSession({ entries, disabled, onSend });
+  const voice = useVoiceSession({ entries, disabled, onSend: onVoiceSend });
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
   }, [entries.length, approval?.status, busy]);

@@ -54,6 +54,7 @@ export function DashboardPage() {
                 error={assistant.error}
                 disabled={!!health.error}
                 onSend={(m) => void assistant.send(m)}
+                onVoiceSend={(m) => void assistant.sendVoice(m)}
                 onApprove={() => void assistant.approve()}
                 onReject={() => void assistant.reject()}
               />

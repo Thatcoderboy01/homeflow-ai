@@ -34,6 +34,8 @@ See README. Three processes (`npm run dev`): web :5173, API :4000, MCP :4100, pl
 
 Set `GEMINI_MODEL=gemini-3.5-flash-lite` initially. Voice output uses the server-side `gemini-2.5-flash-preview-tts` model with the `Kore` voice by default. Verify that the configured Gemini API key can access both models before enabling voice in a deployment.
 
+If the voice endpoint returns `VOICE_QUOTA_EXCEEDED`, the Gemini project has exhausted its TTS quota. Enable billing or request/increase the applicable Generative Language API quota, or wait for the provider's reset window; changing browser settings cannot resolve this provider-side condition. Restart the API after changing the server-side key, project, or TTS model configuration.
+
 ## Database backups & security
 
 - Automated daily dump (`mysqldump --single-transaction`) to an encrypted S3 bucket or EBS snapshots; test a restore.

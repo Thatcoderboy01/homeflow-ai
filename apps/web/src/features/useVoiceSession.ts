@@ -100,9 +100,10 @@ export function useVoiceSession({ entries, disabled, onSend }: Props) {
         audio.onended = finish;
         audio.onerror = finish;
         await audio.play();
-      } catch {
+      } catch (cause) {
         if (!activeRef.current || mutedRef.current || requestId !== speechRequestRef.current) return;
-        setError("Natural voice output is unavailable right now; using browser voice instead.");
+        const message = cause instanceof Error ? cause.message : "Natural voice output is unavailable right now.";
+        setError(`${message} Using browser voice instead.`);
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = navigator.language || "en-US";
         utterance.rate = 0.96;

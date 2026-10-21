@@ -61,8 +61,8 @@ export function VoiceMode({ status, interim, greetingReady, error, entries, appr
           {error ? <p className="rounded-xl border border-rose-400/30 bg-rose-400/10 px-4 py-3 text-rose-200">{error}</p> : interim ? <p className="italic text-slate-400">{interim}</p> : latest ? <p className="line-clamp-3">{latest.text}</p> : greetingReady ? <p className="line-clamp-3">{VOICE_GREETING}</p> : <p>Preparing voice input…</p>}
         </div>
         {approval && (
-          <div className="mt-4 max-h-56 w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-3 text-left">
-            <PlanPreview approval={approval} busy={busy} onApprove={onApprove} onReject={onReject} />
+          <div className="mt-4 w-full max-w-2xl min-w-0 text-left">
+            <PlanPreview approval={approval} busy={busy} onApprove={onApprove} onReject={onReject} variant="voice" />
           </div>
         )}
         <div className="mt-5 shrink-0">
