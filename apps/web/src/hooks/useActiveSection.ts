@@ -42,7 +42,6 @@ export function useActiveSection(ids: readonly string[]) {
       window.removeEventListener("resize", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   const choose = useCallback((id: string) => {

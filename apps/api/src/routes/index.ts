@@ -110,6 +110,20 @@ export function buildRoutes(deps: AppDeps): Router {
       res.status(201).json(out);
     }),
   );
+  r.post(
+    "/voice/speech",
+    wrap(async (req, res) => {
+      if (!deps.speech) {
+        res.status(503).json({ error: { code: "VOICE_UNAVAILABLE", message: "Neural voice output is not configured." } });
+        return;
+      }
+      const body = z.object({ text: z.string().trim().min(1).max(4_000) }).parse(req.body);
+      const audio = await deps.speech.synthesize(body.text);
+      res.setHeader("Content-Type", audio.mimeType);
+      res.setHeader("Cache-Control", "no-store");
+      res.send(audio.audio);
+    }),
+  );
 
   r.get(
     "/approvals/:id",

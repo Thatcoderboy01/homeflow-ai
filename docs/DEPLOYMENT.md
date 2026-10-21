@@ -27,12 +27,12 @@ See README. Three processes (`npm run dev`): web :5173, API :4000, MCP :4100, pl
 | `API_HOST`, `API_PORT`, `CORS_ORIGINS`, `LOG_LEVEL`, `APPROVAL_TTL_SECONDS` | API              |                                                                                                  |
 | `MCP_HOST`, `MCP_PORT`, `MCP_URL`, `MCP_AUTH_TOKEN`, `MCP_ALLOWED_ORIGINS`  | API + MCP        | token ≥ 16 chars, same value in both                                                             |
 | `AI_PROVIDER`                                                               | API              | `mock` (default) or `gemini`                                                                     |
-| `GEMINI_API_KEY`, `GEMINI_MODEL`, `AI_TIMEOUT_MS`                           | API              | Gemini only. Keep the API key in a server-side secret manager and never in the browser           |
+| `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_TTS_MODEL`, `GEMINI_TTS_VOICE`, `AI_TIMEOUT_MS` | API | Gemini only. Keep the API key in a server-side secret manager and never in the browser |
 | `VITE_API_BASE_URL`                                                         | web (build time) | public value; never put secrets in `VITE_*`                                                      |
 
 ## Google Gemini
 
-Set `GEMINI_MODEL=gemini-3.5-flash-lite` initially. Verify that the configured Gemini API key can access the model before enabling it in a deployment.
+Set `GEMINI_MODEL=gemini-3.5-flash-lite` initially. Voice output uses the server-side `gemini-2.5-flash-preview-tts` model with the `Kore` voice by default. Verify that the configured Gemini API key can access both models before enabling voice in a deployment.
 
 ## Database backups & security
 

@@ -5,6 +5,8 @@ import type { LlmProvider } from "./types.js";
 export * from "./types.js";
 export { MockProvider, nextWeekday } from "./mock.js";
 export { GeminiProvider, mapGeminiError } from "./gemini.js";
+export { GeminiSpeechSynthesizer } from "./speech.js";
+export type { GeminiSpeechSynthesizerOptions, SpeechSynthesizer } from "./speech.js";
 
 export interface ProviderConfig {
   provider: "mock" | "gemini";

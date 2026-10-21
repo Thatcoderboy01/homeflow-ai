@@ -12,6 +12,8 @@ const schema = z.object({
   AI_PROVIDER: z.literal("gemini").default("gemini"),
   GEMINI_API_KEY: z.string().optional(),
   GEMINI_MODEL: z.string().default("gemini-3.5-flash-lite"),
+  GEMINI_TTS_MODEL: z.string().default("gemini-2.5-flash-preview-tts"),
+  GEMINI_TTS_VOICE: z.string().default("Kore"),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(30_000),
 });
 export type ApiConfig = z.infer<typeof schema> & { corsOrigins: string[] };

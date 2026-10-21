@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Bot, ClipboardList, Loader2, MessageSquare, Send, ShoppingBasket, Sparkles, Users, type LucideIcon } from "lucide-react";
+import { Bot, ClipboardList, Loader2, MessageSquare, Mic, Send, ShoppingBasket, Sparkles, Users, type LucideIcon } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ApprovalDto } from "@homeflow/shared";
 import type { ChatEntry } from "../../types/ui";
+import { useVoiceSession } from "../../features/useVoiceSession";
 import { ErrorBanner, Panel } from "../layout/Panel";
 import { PlanPreview } from "./PlanPreview";
+import { VoiceMode } from "./VoiceMode";
 
 const EXAMPLE = "Guests are coming on Sunday. Help me prepare.";
 
@@ -31,6 +33,7 @@ export function ChatPanel({ entries, approval, busy, error, disabled, onSend, on
   const [text, setText] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const voice = useVoiceSession({ entries, disabled, onSend });
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ behavior: "smooth", block: "end" });
   }, [entries.length, approval?.status, busy]);
@@ -158,16 +161,43 @@ export function ChatPanel({ entries, approval, busy, error, disabled, onSend, on
             placeholder="e.g. Guests are coming on Sunday. Help me prepare."
             className="flex-1 resize-none bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-slate-400"
           />
-          <button
-            type="submit"
-            disabled={!text.trim() || busy !== "idle" || disabled}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Send className="size-4" aria-hidden /> Send
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={voice.start}
+              disabled={busy !== "idle" || disabled}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-teal-300 hover:text-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Start voice conversation"
+              title="Start voice conversation"
+            >
+              <Mic className="size-4" aria-hidden />
+            </button>
+            <button
+              type="submit"
+              disabled={!text.trim() || busy !== "idle" || disabled}
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-teal-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Send className="size-4" aria-hidden /> Send
+            </button>
+          </div>
         </form>
         <p className="-mt-2 px-1 text-[11px] text-slate-400">Enter to send · Shift+Enter for a new line</p>
       </div>
+      {voice.open && (
+        <VoiceMode
+          status={voice.status}
+          interim={voice.interim}
+          greetingReady={voice.greetingReady}
+          error={voice.error ?? error}
+          entries={entries}
+          approval={approval}
+          busy={busy}
+          onApprove={onApprove}
+          onReject={onReject}
+          onEnd={voice.end}
+          onClose={voice.end}
+        />
+      )}
     </Panel>
   );
 }

@@ -4,7 +4,7 @@ import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import { pinoHttp } from "pino-http";
 import type { Logger } from "pino";
-import type { LlmProvider, ToolCaller } from "@homeflow/agent";
+import type { LlmProvider, SpeechSynthesizer, ToolCaller } from "@homeflow/agent";
 import type { ApiConfig } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { buildRoutes } from "./routes/index.js";
@@ -13,6 +13,7 @@ export interface AppDeps {
   config: Pick<ApiConfig, "corsOrigins" | "NODE_ENV" | "APPROVAL_TTL_SECONDS">;
   logger: Logger;
   provider: LlmProvider;
+  speech?: SpeechSynthesizer;
   mcp: ToolCaller;
   now?: () => Date;
 }

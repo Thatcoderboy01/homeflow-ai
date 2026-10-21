@@ -51,4 +51,17 @@ export const api = {
   approval: (id: string) => request<{ approval: ApprovalDto }>(`/approvals/${id}`).then((r) => r.approval),
   approve: (id: string) => request<DecisionResponseDto>(`/approvals/${id}/approve`, { method: "POST" }),
   reject: (id: string) => request<DecisionResponseDto>(`/approvals/${id}/reject`, { method: "POST" }),
+  speech: async (text: string): Promise<Blob> => {
+    const res = await fetch(`${BASE}/voice/speech`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => undefined)) as ApiErrorBody | undefined;
+      const e = data?.error;
+      throw new ApiError(e?.code ?? "VOICE_ERROR", e?.message ?? `Voice output failed (${res.status})`, res.status);
+    }
+    return res.blob();
+  },
 };
