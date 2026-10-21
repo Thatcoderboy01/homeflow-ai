@@ -68,7 +68,21 @@ export async function planRequest(deps: AgentDeps, householdId: string, req: Pla
       content: [{ type: "text", text: message.content }],
     };
   }
-  const { plan, assistantText } = planned;
+  const unsupportedShoppingProvider = planned.plan.actions.some(
+    (action) => action.type === "prepare_shopping_cart" && action.provider !== "manual",
+  );
+  const plan = unsupportedShoppingProvider
+    ? {
+        ...planned.plan,
+        summary: `${planned.plan.summary} HomeFlow will prepare a manual checklist only; verify the retailer cart, prices, availability, fees, and checkout yourself.`,
+        actions: planned.plan.actions.map((action) =>
+          action.type === "prepare_shopping_cart" ? { ...action, provider: "manual" as const } : action,
+        ),
+      }
+    : planned.plan;
+  const assistantText = unsupportedShoppingProvider
+    ? `${planned.assistantText} This is a HomeFlow manual checklist, not a Blinkit, Zepto, or other retailer cart.`
+    : planned.assistantText;
 
   const approval = await createApproval({
     householdId,

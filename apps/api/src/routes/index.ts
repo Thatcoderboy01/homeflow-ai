@@ -1,11 +1,22 @@
 import { Router, type RequestHandler } from "express";
-import { checkDatabase, getDefaultHouseholdId, getHouseholdContext, listGroceries, listTasks } from "@homeflow/database";
-import type { HealthDto } from "@homeflow/shared";
-import { planRequestSchema } from "@homeflow/shared";
+import {
+  checkDatabase,
+  getDefaultHouseholdId,
+  getHouseholdContext,
+  getLatestShoppingCart,
+  getShoppingCart,
+  listGroceries,
+  listTasks,
+  markShoppingCartHandedOff,
+} from "@homeflow/database";
+import type { HealthDto, ShoppingProvider } from "@homeflow/shared";
+import { planRequestSchema, SHOPPING_PROVIDERS } from "@homeflow/shared";
+import { z } from "zod";
 import type { AppDeps } from "../app.js";
 import { idParamSchema } from "../schemas/requests.js";
 import { planRequest } from "../services/agentService.js";
 import { approveAndExecute, fetchApproval, reject } from "../services/approvalService.js";
+import { checkoutHandoffUrl, searchShoppingProducts, shoppingCapabilities } from "../services/shoppingService.js";
 
 const wrap =
   (fn: RequestHandler): RequestHandler =>
@@ -47,6 +58,44 @@ export function buildRoutes(deps: AppDeps): Router {
   r.get(
     "/groceries",
     wrap(async (_req, res) => void res.json({ items: await listGroceries(await household()) })),
+  );
+  r.get("/shopping/capabilities", wrap(async (_req, res) => void res.json({ providers: shoppingCapabilities() })));
+  r.get("/shopping/cart", wrap(async (_req, res) => void res.json({ cart: await getLatestShoppingCart(await household()) })));
+  r.post(
+    "/shopping/search",
+    wrap(async (req, res) => {
+      const body = z.object({ provider: z.enum(SHOPPING_PROVIDERS), query: z.string().trim().min(1).max(120) }).parse(req.body);
+      res.json(searchShoppingProducts(body.provider, body.query));
+    }),
+  );
+  r.get(
+    "/shopping/cart/:id",
+    wrap(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      const cart = await getShoppingCart(await household(), id);
+      if (!cart) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Shopping cart not found." } });
+        return;
+      }
+      res.json({ cart });
+    }),
+  );
+  r.post(
+    "/shopping/cart/:id/handoff",
+    wrap(async (req, res) => {
+      const { id } = idParamSchema.parse(req.params);
+      const cart = await getShoppingCart(await household(), id);
+      if (!cart) {
+        res.status(404).json({ error: { code: "NOT_FOUND", message: "Shopping cart not found." } });
+        return;
+      }
+      const handoffUrl = checkoutHandoffUrl(cart.provider as ShoppingProvider, cart.handoffUrl);
+      if (!handoffUrl) {
+        res.status(409).json({ error: { code: "UNSUPPORTED", message: "No official checkout handoff is configured." } });
+        return;
+      }
+      res.json({ cart: await markShoppingCartHandedOff(await household(), id, handoffUrl), handoffUrl });
+    }),
   );
 
   r.post(

@@ -41,6 +41,12 @@ enum ApprovalStatus {
   FAILED
 }
 
+enum ShoppingCartStatus {
+  PREPARED
+  HANDED_OFF
+  CANCELLED
+}
+
 /// isDemo = true marks fake demo data created by the seed script.
 model Household {
   id            String            @id @default(cuid())
@@ -55,6 +61,7 @@ model Household {
   groceryItems  GroceryItem[]
   conversations Conversation[]
   approvals     ActionApproval[]
+  shoppingCarts ShoppingCart[]
 }
 
 model HouseholdMember {
@@ -159,7 +166,32 @@ model ActionApproval {
   household      Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
   conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   tasks          Task[]
+  shoppingCarts  ShoppingCart[]
 
   @@index([householdId, status])
   @@index([status, expiresAt])
+}
+
+model ShoppingCart {
+  id             String            @id @default(cuid())
+  householdId    String
+  approvalId     String?
+  actionIndex    Int?
+  provider       String            @db.VarChar(40)
+  status         ShoppingCartStatus @default(PREPARED)
+  location       String?           @db.VarChar(120)
+  budgetInr      Int?
+  subtotalInr    Int?
+  feesInr        Int?
+  feesKnown      Boolean           @default(false)
+  items          Json
+  handoffUrl     String?           @db.VarChar(2000)
+  quoteObservedAt DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  household      Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  approval       ActionApproval?    @relation(fields: [approvalId], references: [id], onDelete: SetNull)
+
+  @@unique([approvalId, actionIndex])
+  @@index([householdId, status])
 }

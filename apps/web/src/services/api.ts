@@ -1,4 +1,14 @@
-import type { ApiErrorBody, ApprovalDto, DecisionResponseDto, GroceryItemDto, HealthDto, PlanResponseDto, TaskDto } from "@homeflow/shared";
+import type {
+  ApiErrorBody,
+  ApprovalDto,
+  DecisionResponseDto,
+  GroceryItemDto,
+  HealthDto,
+  PlanResponseDto,
+  ShoppingCapabilityDto,
+  ShoppingCartDto,
+  TaskDto,
+} from "@homeflow/shared";
 
 const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://localhost:4000/api/v1";
 
@@ -32,6 +42,10 @@ export const api = {
   health: () => request<HealthDto>("/health"),
   tasks: () => request<{ tasks: TaskDto[] }>("/tasks").then((r) => r.tasks),
   groceries: () => request<{ items: GroceryItemDto[] }>("/groceries").then((r) => r.items),
+  shoppingCapabilities: () => request<{ providers: ShoppingCapabilityDto[] }>("/shopping/capabilities").then((r) => r.providers),
+  shoppingCart: () => request<{ cart: ShoppingCartDto | null }>("/shopping/cart").then((r) => r.cart),
+  shoppingHandoff: (id: string) =>
+    request<{ cart: ShoppingCartDto; handoffUrl: string }>(`/shopping/cart/${id}/handoff`, { method: "POST" }),
   plan: (message: string, conversationId?: string) =>
     request<PlanResponseDto>("/agent/plan", { method: "POST", body: JSON.stringify({ message, conversationId }) }),
   approval: (id: string) => request<{ approval: ApprovalDto }>(`/approvals/${id}`).then((r) => r.approval),

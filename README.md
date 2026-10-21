@@ -312,6 +312,10 @@ documented yet):
    schemas need a heads-up to everyone.
 5. Never commit `.env`, credentials, or database dumps.
 
+## Grocery shopping
+
+The approval-gated shopping cart and provider capability limitations are documented in [docs/SHOPPING.md](docs/SHOPPING.md). Blinkit and Zepto currently use an honest manual handoff because no authorized public consumer APIs were verified.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

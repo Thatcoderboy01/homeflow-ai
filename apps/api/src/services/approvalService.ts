@@ -11,7 +11,12 @@ import {
 
 function toToolCall(action: ProposedAction, ctx: { householdId: string; approvalId: string; actionIndex: number }) {
   const { type, ...fields } = action;
-  const name = type === "create_task" ? MCP_TOOL_NAMES.createTask : MCP_TOOL_NAMES.updateGroceryList;
+  const name =
+    type === "create_task"
+      ? MCP_TOOL_NAMES.createTask
+      : type === "update_grocery_list"
+        ? MCP_TOOL_NAMES.updateGroceryList
+        : MCP_TOOL_NAMES.prepareShoppingCart;
   return { name, args: { ...ctx, ...fields } as Record<string, unknown> };
 }
 

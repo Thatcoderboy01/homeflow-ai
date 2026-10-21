@@ -126,6 +126,79 @@ describe("health, validation and errors", () => {
 });
 
 describe("plan -> approve -> execute", () => {
+  it("prepares an approval-gated cart and exposes only a manual handoff", async () => {
+    const app = makeApp();
+    const plan = await request(app).post("/api/v1/agent/plan").send({ message: "Prepare a shopping cart from my grocery list." });
+    expect(plan.status).toBe(201);
+    expect(plan.body.approval.actions).toEqual([
+      expect.objectContaining({ type: "prepare_shopping_cart", provider: "manual" }),
+    ]);
+    const approval = await request(app).post(`/api/v1/approvals/${plan.body.approval.id}/approve`);
+    expect(approval.body.approval.status).toBe("EXECUTED");
+    const cart = await request(app).get("/api/v1/shopping/cart");
+    expect(cart.body.cart).toMatchObject({ status: "PREPARED", provider: "manual" });
+    expect(cart.body.cart.subtotalInr).toBeNull();
+    const handoff = await request(app).post(`/api/v1/shopping/cart/${cart.body.cart.id}/handoff`);
+    expect(handoff.status).toBe(409);
+  });
+
+  it("reports provider limitations instead of fabricated product data", async () => {
+    const app = makeApp();
+    const capabilities = await request(app).get("/api/v1/shopping/capabilities");
+    expect(capabilities.status).toBe(200);
+    expect(capabilities.body.providers.find((p: { provider: string }) => p.provider === "blinkit")).toMatchObject({
+      mode: "manual_handoff",
+      productSearch: false,
+    });
+    const search = await request(app).post("/api/v1/shopping/search").send({ provider: "blinkit", query: "milk" });
+    expect(search.status).toBe(200);
+    expect(search.body.products).toEqual([]);
+    expect(search.body.message).toMatch(/not configured/i);
+  });
+
+  it("downgrades unsupported retailer cart proposals to an honest manual checklist", async () => {
+    const provider: LlmProvider = {
+      name: "gemini",
+      isMock: false,
+      generate: async (req) => {
+        const hasContext = req.messages.some((message) =>
+          message.content.some((block) => block.type === "tool_result" && !block.isError),
+        );
+        return hasContext
+          ? {
+              stopReason: "tool_use",
+              content: [
+                { type: "text", text: "Prepared a cart on Blinkit." },
+                {
+                  type: "tool_use",
+                  id: "shopping-plan",
+                  name: "propose_plan",
+                  input: {
+                    summary: "Prepared a cart on Blinkit.",
+                    actions: [
+                      {
+                        type: "prepare_shopping_cart",
+                        provider: "blinkit",
+                        items: [{ name: "Milk", quantity: 2, unit: "litre" }],
+                      },
+                    ],
+                  },
+                },
+              ],
+            }
+          : {
+              stopReason: "tool_use",
+              content: [{ type: "tool_use", id: "context", name: "get_household_context", input: {} }],
+            };
+      },
+    };
+    const res = await request(makeApp({ provider })).post("/api/v1/agent/plan").send({ message: "Prepare a Blinkit cart." });
+    expect(res.status).toBe(201);
+    expect(res.body.approval.actions[0]).toMatchObject({ type: "prepare_shopping_cart", provider: "manual" });
+    expect(res.body.assistantMessage).toMatch(/manual checklist/i);
+    expect(res.body.assistantMessage).not.toMatch(/notified|order placed/i);
+  });
+
   it("planning changes nothing; approval executes and persists", async () => {
     const app = makeApp();
     const plan = await request(app).post("/api/v1/agent/plan").send({ message: GUESTS });

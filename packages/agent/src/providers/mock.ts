@@ -15,7 +15,7 @@ export function nextWeekday(now: Date, weekday: number): Date {
 
 interface ContextShape {
   upcomingTasks?: { title: string }[];
-  groceryItems?: { name: string }[];
+  groceryItems?: { name: string; quantity?: number; unit?: string | null; status?: string }[];
   household?: { preferences?: { dietary?: string[] } | null };
 }
 
@@ -62,6 +62,19 @@ export class MockProvider implements LlmProvider {
     const now = this.clock();
     const existingTasks = new Set((ctx.upcomingTasks ?? []).map((t) => t.title.toLowerCase()));
     const existingGroceries = new Set((ctx.groceryItems ?? []).map((g) => g.name.toLowerCase()));
+    if (/\b(cart|checkout|shopping online|find .* (milk|bread|eggs)|compare .* price)/.test(lower)) {
+      const items = (ctx.groceryItems ?? [])
+        .filter((item) => item.status !== "PURCHASED")
+        .map((item) => ({ name: item.name, quantity: item.quantity ?? 1, ...(item.unit ? { unit: item.unit } : {}) }));
+      return {
+        summary: items.length
+          ? `I prepared a manual shopping cart proposal for ${items.length} items. Prices and availability must be confirmed at checkout.`
+          : "Your grocery list has no needed items to prepare as a cart. Add grocery items first.",
+        actions: items.length
+          ? [{ type: "prepare_shopping_cart", provider: "manual", items }]
+          : [{ type: "create_task", title: "Add items to the grocery list before preparing a cart", status: "TODO" }],
+      };
+    }
     const isHosting = /(guest|visitor|party|dinner|company|host)/.test(lower);
 
     if (!isHosting) {

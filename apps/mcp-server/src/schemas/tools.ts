@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { createTaskFields, updateGroceryFields } from "@homeflow/shared";
+import { createTaskFields, prepareShoppingCartFields, updateGroceryFields } from "@homeflow/shared";
 
 const householdId = z.string().min(1).max(64).describe("Household identifier (injected by the backend, not chosen by the model).");
 const approvalMeta = {
@@ -15,7 +15,9 @@ export const getHouseholdContextShape = {
 };
 export const createTaskShape = { householdId, ...approvalMeta, ...createTaskFields };
 export const updateGroceryListShape = { householdId, ...approvalMeta, ...updateGroceryFields };
+export const prepareShoppingCartShape = { householdId, ...approvalMeta, ...prepareShoppingCartFields };
 
 export const getHouseholdContextInput = z.object(getHouseholdContextShape);
 export const createTaskInput = z.object(createTaskShape);
 export const updateGroceryListInput = z.object(updateGroceryListShape);
+export const prepareShoppingCartInput = z.object(prepareShoppingCartShape);

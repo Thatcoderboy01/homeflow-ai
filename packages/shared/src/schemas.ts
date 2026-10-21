@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export const TASK_STATUSES = ["TODO", "IN_PROGRESS", "DONE", "CANCELLED"] as const;
 export const GROCERY_STATUSES = ["NEEDED", "PURCHASED"] as const;
+export const SHOPPING_PROVIDERS = ["blinkit", "zepto", "swiggy_instamart", "ondc", "manual"] as const;
+export type ShoppingProvider = (typeof SHOPPING_PROVIDERS)[number];
 
 export const LIMITS = {
   title: 200,
@@ -12,6 +14,8 @@ export const LIMITS = {
   maxQuantity: 999,
   maxActionsPerPlan: 25,
   maxMessageLength: 2000,
+  maxCartItems: 50,
+  maxBudgetInr: 1_000_000,
 } as const;
 
 const trimmed = (max: number) => z.string().trim().min(1).max(max);
@@ -37,10 +41,28 @@ export const updateGroceryFields = {
 export const updateGroceryInputSchema = z.object(updateGroceryFields);
 export type UpdateGroceryInput = z.infer<typeof updateGroceryInputSchema>;
 
+export const shoppingCartItemSchema = z.object({
+  name: trimmed(LIMITS.groceryName),
+  quantity: z.number().int().min(1).max(LIMITS.maxQuantity),
+  unit: z.string().trim().min(1).max(LIMITS.unit).optional(),
+  productUrl: z.string().url().max(2000).optional(),
+});
+export type ShoppingCartItem = z.infer<typeof shoppingCartItemSchema>;
+
+export const prepareShoppingCartFields = {
+  provider: z.enum(SHOPPING_PROVIDERS).default("manual"),
+  items: z.array(shoppingCartItemSchema).min(1).max(LIMITS.maxCartItems),
+  location: z.string().trim().max(120).optional(),
+  budgetInr: z.number().int().min(1).max(LIMITS.maxBudgetInr).optional(),
+};
+export const prepareShoppingCartSchema = z.object(prepareShoppingCartFields);
+export type PrepareShoppingCartInput = z.infer<typeof prepareShoppingCartSchema>;
+
 /** A proposed, not-yet-executed action. Only these types can ever be approved. */
 export const actionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("create_task"), ...createTaskFields }),
   z.object({ type: z.literal("update_grocery_list"), ...updateGroceryFields }),
+  z.object({ type: z.literal("prepare_shopping_cart"), ...prepareShoppingCartFields }),
 ]);
 export type ProposedAction = z.infer<typeof actionSchema>;
 
@@ -60,6 +82,7 @@ export const MCP_TOOL_NAMES = {
   getHouseholdContext: "get_household_context",
   createTask: "create_task",
   updateGroceryList: "update_grocery_list",
+  prepareShoppingCart: "prepare_shopping_cart",
 } as const;
 
 /** Lower-case, trim and collapse whitespace so "  Whole  Milk " equals "whole milk". */

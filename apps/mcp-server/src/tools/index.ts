@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { actionSchema, MCP_TOOL_NAMES } from "@homeflow/shared";
-import { assertActionApproved, createTask, getHouseholdContext, upsertGroceryItem } from "@homeflow/database";
+import { assertActionApproved, createTask, getHouseholdContext, prepareShoppingCart, upsertGroceryItem } from "@homeflow/database";
 import type { Logger } from "pino";
-import { createTaskShape, getHouseholdContextShape, updateGroceryListShape } from "../schemas/tools.js";
+import { createTaskShape, getHouseholdContextShape, prepareShoppingCartShape, updateGroceryListShape } from "../schemas/tools.js";
 import { runTool } from "./runTool.js";
 
 export function registerTools(server: McpServer, logger: Logger): void {
@@ -63,6 +63,29 @@ export function registerTools(server: McpServer, logger: Logger): void {
           await assertActionApproved({ approvalId, householdId, actionIndex, action });
           const { item, created } = await upsertGroceryItem(householdId, { ...fields });
           return { item, created };
+        },
+      ),
+  );
+
+  server.registerTool(
+    MCP_TOOL_NAMES.prepareShoppingCart,
+    {
+      title: "Prepare shopping cart",
+      description:
+        "Persists a proposed grocery cart for review. It never searches a retailer, places an order, or stores payment credentials. Requires an APPROVED approval.",
+      inputSchema: prepareShoppingCartShape,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    },
+    (args) =>
+      runTool(
+        logger,
+        MCP_TOOL_NAMES.prepareShoppingCart,
+        { householdId: args.householdId, approvalId: args.approvalId, actionIndex: args.actionIndex },
+        async () => {
+          const { householdId, approvalId, actionIndex, ...fields } = args;
+          const action = actionSchema.parse({ type: "prepare_shopping_cart", ...fields });
+          await assertActionApproved({ approvalId, householdId, actionIndex, action });
+          return prepareShoppingCart(householdId, fields, { approvalId, actionIndex });
         },
       ),
   );

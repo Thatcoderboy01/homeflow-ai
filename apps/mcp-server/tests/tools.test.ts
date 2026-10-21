@@ -51,7 +51,7 @@ describe("MCP server over Streamable HTTP", () => {
     expect(res.status).toBe(403);
   });
 
-  it("lists exactly the three defined tools", async () => {
+  it("lists exactly the four defined tools", async () => {
     const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
     const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
     const c = new Client({ name: "t", version: "1" });
@@ -61,7 +61,7 @@ describe("MCP server over Streamable HTTP", () => {
       }),
     );
     const tools = (await c.listTools()).tools.map((t) => t.name).sort();
-    expect(tools).toEqual(["create_task", "get_household_context", "update_grocery_list"]);
+    expect(tools).toEqual(["create_task", "get_household_context", "prepare_shopping_cart", "update_grocery_list"]);
     expect(c.getServerVersion()?.name).toBe("homeflow-mcp");
     await c.close();
   });
@@ -149,5 +149,24 @@ describe("MCP server over Streamable HTTP", () => {
     await expect(
       mcpClientFor(mcp.url).callTool("create_task", { householdId: hid, approvalId: "a", actionIndex: 0, title: "" }),
     ).rejects.toBeDefined();
+  });
+
+  it("prepares an approved shopping cart without claiming a live order", async () => {
+    const action: ProposedAction = {
+      type: "prepare_shopping_cart",
+      provider: "manual",
+      items: [{ name: "Milk", quantity: 2, unit: "litre" }],
+    };
+    const id = await approved([action]);
+    const out = (await mcpClientFor(mcp.url).callTool("prepare_shopping_cart", {
+      householdId: hid,
+      approvalId: id,
+      actionIndex: 0,
+      provider: "manual",
+      items: [{ name: "Milk", quantity: 2, unit: "litre" }],
+    })) as { cart: { status: string; items: { name: string }[] }; created: boolean };
+    expect(out.created).toBe(true);
+    expect(out.cart.status).toBe("PREPARED");
+    expect(out.cart.items[0]?.name).toBe("Milk");
   });
 });

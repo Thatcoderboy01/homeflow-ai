@@ -48,9 +48,19 @@ export function PlanPreview({
                 <ShoppingBasket className="mt-0.5 size-4 shrink-0 text-teal-600" aria-label="Grocery item" />
               )}
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{a.type === "create_task" ? a.title : a.name}</p>
+                <p className="font-medium">
+                  {a.type === "create_task"
+                    ? a.title
+                    : a.type === "update_grocery_list"
+                      ? a.name
+                      : `Prepare ${a.items.length} items for ${a.provider}`}
+                </p>
                 <p className="text-xs text-slate-500">
-                  {a.type === "create_task" ? formatDue(a.dueDate ?? null) : formatQuantity(a.quantity ?? 1, a.unit ?? null)}
+                  {a.type === "create_task"
+                    ? formatDue(a.dueDate ?? null)
+                    : a.type === "update_grocery_list"
+                      ? formatQuantity(a.quantity ?? 1, a.unit ?? null)
+                      : `${a.location ?? "Location to be confirmed"}${a.budgetInr ? ` · Budget ₹${a.budgetInr}` : ""}`}
                 </p>
               </div>
               {result &&
@@ -74,7 +84,9 @@ export function PlanPreview({
             className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {busy === "approving" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Check className="size-4" aria-hidden />}
-            {busy === "approving" ? "Waiting for backend…" : `Approve ${approval.actions.length} actions`}
+            {busy === "approving"
+              ? "Waiting for backend…"
+              : `Approve ${approval.actions.length} ${approval.actions.length === 1 ? "action" : "actions"}`}
           </button>
           <button
             onClick={onReject}
